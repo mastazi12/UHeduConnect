@@ -1,0 +1,4 @@
+*.pyc
+*.json
+*.pid
+*.socket

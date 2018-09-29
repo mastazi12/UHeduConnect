@@ -1,0 +1,233 @@
+{% include "header.html" %}
+
+{% include "menu.html" %}
+
+<!--
+SEARCH:
+
+indexes
+fields
+group_by
+limit : { 'offset' : 0, 'count' }
+order_by : [[field_1, direction_asc],[field_2, direction_desc]]
+order_within_group : [[field_1, direction_asc],[field_2, direction_desc]]
+where : { 'date_from' : [[ '>', 1323243203 ]] }
+q -> query
+option : { 'option_name' : 'option_value' }
+
+-->
+
+<script type="text/javascript">
+  {{ json_data|safe }}
+  search = [ 
+    { 'id' : 'indexes', 'name' : 'indexes' },
+    { 'id' : 'fields',  'name' : 'fields'  },
+    { 'id' : 'group_by', 'name' : 'group_by' },
+    { 'id' : 'limit', 'name'   : 'limit' },
+    { 'id' : 'order_by', 'name' : 'order_by' },
+    { 'id' : 'order_within_group', 'name' : 'order_within_group' },
+    { 'id' : 'where', 'name'    : 'where' },
+    { 'id' : 'q', 'name' : 'q' },
+    { 'id' : 'option', 'name' : 'option' }
+  ];
+</script>
+
+<div id="ajax-loader" style="display: none;">
+  <div class="progress progress-striped progress-success active">
+    <div class="bar" style="width: 100%;"></div>
+  </div>
+</div>
+<script type="text/javascript">
+function show_callback_editor(el){
+  if ( $(el).attr('checked') ){
+    $('#callback-container').slideDown('slow');
+  } else {
+    $('#callback-container').slideUp('fast');
+  }
+}
+function add_json_value(){  
+  text = $('#json-data').text();
+  data = {};
+  if ( text.replace(/\s+/,'') != '' ){
+    data = JSON.parse(text);
+  }
+  key = $('#json-key').text();
+  value = JSON.parse('"' + $('#json-value').val() + '"');
+  data[key] = value;
+  $.ajax({
+    'async'   : false,
+    'url'     : '/admin/highlighter',
+    'data'    : 'code=' + encodeURIComponent(JSON.stringify(data, undefined, 2)),
+    'success' : function(data){
+      $('#json-data').html(data.code);
+    }
+  });
+  $('#modal-container').modal('hide');
+  $('#json-value').val('');
+}
+function optionize(element, data){
+  $.each(data, function(index, item){
+    $(element).append('<option value="' + item.id + '">' + item.name + '</option>');
+  });
+}
+$(document).ready(function(){
+  $('#callback-container').popover({
+    'placement' : 'right',
+    'html'      : true,
+    'trigger'   : 'focus',
+    'title'     : 'Scripting',
+    'content'   : 'You can write Javascript code to manipulate <br />the <code>response</code> object! ' + 
+                  '<br /> Example for the <i>/home/</i> request: <br /> ' + 
+                  '<code>response["Greetings-From"] = ' + "<br />\n" +
+                  '  "Hello everyone from ";</code>'
+  });
+  optionize('#search', search);
+  optionize('#searchd', searchd); 
+  optionize('#options', options);
+  optionize('#indexes', indexes);
+  optionize('#configurations', configurations);
+  $('#api-data select.value-required').change(function(){
+    $('#modal-container .modal-body label').text($(this).children('option:selected').text());
+    $('#modal-container').modal();    
+  });
+  $('.request-types').click(function(){    
+    if ( $(this).hasClass('has-data') ){
+      $('#json-data-container').show();
+    } else {
+      $('#json-data-container').hide();
+    }
+    $('#url').text('https://techu' + $(this).text());
+  });
+  $('#btn-run').click(function(){
+    $('#response').html($('#ajax-loader').html());
+    var data = $('#api-data').serialize();
+    data += '&url=' + encodeURIComponent($('#url').text());
+    $.ajax({
+      'type'    : 'POST',
+      'url'     : '/admin/api',
+      'data'    : data,
+      'cache'   : false,
+      'success' : function(data){
+        $('#response').html('<pre>' + data + '</pre>');
+      }
+    });
+  }); 
+});
+</script>
+
+<style>
+#json-data {
+  width: 98%;
+  min-height: 100px;
+}
+.wrapper {
+  width: 90%;
+  margin: 10px auto;
+}
+.configuration-menu{
+  margin-left: 20px;
+}
+.list-group {
+  margin-left: -6px;
+  font-weight:bold;
+}
+</style>
+
+<div class="row">
+  <div class="span3">
+    <div class="well configuration-menu">
+      <ul class="nav">
+        <li class="list-group">Configuration &amp; Setup</li>
+        <li><a class="request-types" href="#configuration">/configuration</a></li>
+        <li><a class="request-types" href="#options">/configuration/list</a></li>
+        <li><a class="request-types" href="#generate">/generate</a></li>
+        <li><a class="request-types" href="#index">/index</a></li>
+        <li><a class="request-types" href="#indexes">/index/list</a></li>
+        <li><a class="request-types" href="#option">/option</a></li>
+        <li><a class="request-types" href="#options">/option/list</a></li>
+        <li class="list-group">Indexing</li>
+        <li><a class="request-types has-data" href="#batch">/batch</a></li>
+        <li><a class="request-types has-data" href="#indexer">/indexer</a></li>
+        <li class="list-group">Searching &amp; Excerpts</li>
+        <li><a class="request-types has-data" href="#excerpts">/excerpts</a></li>
+        <li><a class="request-types has-data" href="#search">/search</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="span9">
+    <div class="well">
+      <div class="url">
+        <a id="url" href="javascript:;">{{ url }}</a>
+        <a id="btn-run" class="pull-right btn btn-info">Run</a>
+        <div class="clearfix"></div>
+        <div class="well clearfix" style="margin-top: 20px;">
+          <form id="api-data">
+            <label class="checkbox pull-left" style="margin-top: 4px;margin-right: 10px;">Pretty Print
+              <input type="checkbox" value="1" name="pretty" checked />
+            </label>
+            <label class="checkbox pull-left" style="margin-top: 4px;margin-right: 10px;">Callback
+              <input type="checkbox" value="1" name="callback" onchange="show_callback_editor($(this));" />
+            </label>
+            <textarea id="callback-container" style="width: 100%; height: 200px; display: none;">
+            </textarea>
+            <div class="clearfix"></div>
+            <select id="dml-type" name="dml-type" class="data-controls batch indexer">
+              <option selected value="-1">Operation...</option>
+              <option value="insert">Insert</option>
+              <option value="update">Update</option>
+              <option value="delete">Delete</option>
+            </select>
+            <select id="section" name="section" class="data-controls option">
+              <option selected value="-1">Section...</option>
+              <option value="index">Index</option>
+              <option value="searchd">Searchd</option>
+            </select>
+            <div class="clearfix"></div>            
+            <select id="indexes" name="indexes">
+              <option value="-1">Index...</option>
+            </select>
+            <select id="configurations" name="configurations">
+              <option value="-1">Configuration...</option>
+            </select>
+            <select id="searchd" name="searchd">
+              <option value="-1">Searchd...</option>
+            </select>
+            <select id="options" name="options" class="value-required">
+              <option value="-1">Option...</option>
+            </select>
+            <div class="clearfix"></div>
+            <select id="search" class="value-required">
+              <option value="-1">Parameters</option>
+            </select>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div id="json-data-container" class="clearfix well well-small">
+      <div id="json-data" contenteditable="true">
+      </div>
+    </div>
+    <div class="well">
+      <div id="response">
+        <pre>{{ api_response }}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-container" class="modal hide fade">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+    <h3>JSON Value</h3>
+  </div>
+  <div class="modal-body">
+    <label id="json-key" style="font-weight: bold;"></label>
+    <input type="text" id="json-value" placeholder="Enter a value" />    
+  </div>
+  <div class="modal-footer">
+    <a href="javascript:;" onclick="$('#modal-container').modal('hide');return false;" class="btn">Close</a>
+    <a href="javascript:;" onclick="add_json_value();" class="btn btn-primary">Save changes</a>
+  </div>
+</div>
+
+{% include "footer.html" %}
