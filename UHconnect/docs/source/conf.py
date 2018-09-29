@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Techu documentation build configuration file, created by
+# UHconnect documentation build configuration file, created by
 # sphinx-quickstart on Tue May  7 16:17:04 2013.
 #
 # This file is execfile()d with the current directory set to its containing dir.
